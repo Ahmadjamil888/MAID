@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { User, Mail, Shield, Loader2, Check, LogOut } from 'lucide-react'
-import { GROQ_MODELS, type GroqModelId } from '@/lib/groq/client'
+import { GROQ_MODELS, type GroqModelId } from '@/lib/groq/models'
 
 export default function SettingsPage() {
   const supabase = createClient()

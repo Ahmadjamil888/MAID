@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Send, Loader2, Plus, Zap, Database, FlaskConical, Activity, Search, Dna } from 'lucide-react'
 import ChatMessage from './ChatMessage'
 import type { ChatMessage as ChatMsg, ToolMode, DataSource } from '@/types'
-import type { GroqModelId } from '@/lib/groq/client'
-import { GROQ_MODELS } from '@/lib/groq/client'
+import type { GroqModelId } from '@/lib/groq/models'
+import { GROQ_MODELS } from '@/lib/groq/models'
 import { nanoid } from './nanoid'
 
 const SUGGESTED = [

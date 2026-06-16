@@ -1,6 +1,6 @@
 'use client'
 
-import { GROQ_MODELS, type GroqModelId } from '@/lib/groq/client'
+import { GROQ_MODELS, type GroqModelId } from '@/lib/groq/models'
 import { Zap } from 'lucide-react'
 
 interface Props {

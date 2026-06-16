@@ -136,11 +136,11 @@ function MockWindow({
 }) {
   return (
     <div
-      className="w-full rounded-2xl overflow-hidden"
+      className="w-full rounded-2xl overflow-hidden flex flex-col"
       style={{
         background: '#1c1b19',
         border: `1px solid ${BORDER}`,
-        boxShadow: '0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04)',
+        boxShadow: '0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
       }}
     >
       {/* Title bar */}
@@ -157,7 +157,7 @@ function MockWindow({
       </div>
 
       {/* Content */}
-      <div className="p-5 space-y-3 min-h-[220px]">
+      <div className="flex-1 p-5 space-y-3" style={{ minHeight: '240px' }}>
         {lines.map((line, i) => (
           <div key={i}>
             {line.role === 'user' && (
@@ -238,16 +238,18 @@ export default function LandingSections() {
         <section
           key={sec.tag}
           id={idx === 0 ? 'features' : idx === 2 ? 'how-it-works' : undefined}
-          className="py-24 px-6"
-          style={{ scrollMarginTop: '80px' }}
+          style={{ scrollMarginTop: '80px', borderBottom: `1px solid ${BORDER}` }}
         >
+          {/* Full-bleed two-column row — mock covers exactly 50% */}
           <div
-            className={`max-w-6xl mx-auto flex flex-col gap-14 items-center ${
-              sec.flip ? 'lg:flex-row-reverse' : 'lg:flex-row'
-            } lg:gap-16`}
+            className={`max-w-6xl mx-auto flex flex-col lg:flex-row ${sec.flip ? 'lg:flex-row-reverse' : ''}`}
+            style={{ minHeight: '520px' }}
           >
-            {/* Text side */}
-            <div className="flex-1 min-w-0">
+            {/* ── Text half ── */}
+            <div
+              className="flex flex-col justify-center px-8 py-16 lg:py-20"
+              style={{ flex: '0 0 50%', borderRight: sec.flip ? 'none' : `1px solid ${BORDER}`, borderLeft: sec.flip ? `1px solid ${BORDER}` : 'none' }}
+            >
               <p
                 className="text-xs uppercase tracking-widest font-semibold mb-5"
                 style={{ color: DIM }}
@@ -258,7 +260,7 @@ export default function LandingSections() {
                 className="font-bold leading-tight mb-5 whitespace-pre-line"
                 style={{
                   color: TEXT,
-                  fontSize: 'clamp(1.85rem, 3.2vw, 2.6rem)',
+                  fontSize: 'clamp(1.75rem, 2.8vw, 2.4rem)',
                   letterSpacing: '-0.03em',
                   fontFamily: "'Inter', sans-serif",
                   fontWeight: 700,
@@ -268,31 +270,30 @@ export default function LandingSections() {
               </h2>
               <p
                 className="leading-relaxed mb-7"
-                style={{ color: MUTED, fontSize: '0.98rem', maxWidth: '440px' }}
+                style={{ color: MUTED, fontSize: '0.95rem', maxWidth: '400px' }}
               >
                 {sec.sub}
               </p>
               <Link
                 href={sec.ctaHref}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold transition-colors group"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold transition-colors group w-fit"
                 style={{ color: '#e8702a' }}
                 onMouseEnter={e => (e.currentTarget.style.color = '#f5894a')}
                 onMouseLeave={e => (e.currentTarget.style.color = '#e8702a')}
               >
                 {sec.cta}
-                <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                <ArrowRight size={14} />
               </Link>
             </div>
 
-            {/* Mock window side */}
-            <div className="flex-1 w-full min-w-0">
+            {/* ── Mock window half — fills full height of the row ── */}
+            <div
+              className="flex flex-col items-stretch justify-center p-8 lg:p-10"
+              style={{ flex: '0 0 50%', background: '#0e0e0d' }}
+            >
               <MockWindow title={sec.mockTitle} lines={sec.mockLines} sources={sec.sources} />
             </div>
           </div>
-
-          {idx < FEATURE_SECTIONS.length - 1 && (
-            <div className="max-w-6xl mx-auto mt-24" style={{ height: '1px', background: BORDER }} />
-          )}
         </section>
       ))}
 

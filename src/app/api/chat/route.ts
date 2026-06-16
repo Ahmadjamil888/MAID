@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { runAgentStream } from '@/lib/groq/agent'
 import type { ChatMessage, ToolMode } from '@/types'
-import type { GroqModelId } from '@/lib/groq/client'
+import type { GroqModelId } from '@/lib/groq/models'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
