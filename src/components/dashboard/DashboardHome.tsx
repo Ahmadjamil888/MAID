@@ -4,51 +4,21 @@ import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { MessageSquare, FlaskConical, Activity, Search, Dna, ArrowRight, Clock } from 'lucide-react'
 
-const QUICK_ACTIONS = [
-  {
-    icon: MessageSquare,
-    title: 'Research Chat',
-    desc: 'Ask anything about drugs, molecules, or targets',
-    href: '/dashboard/chat',
-    color: 'bg-white/10',
-  },
-  {
-    icon: FlaskConical,
-    title: 'Molecule Search',
-    desc: 'Search PubChem & ChEMBL databases',
-    href: '/dashboard/molecules',
-    color: 'bg-white/10',
-  },
-  {
-    icon: Activity,
-    title: 'Interaction Check',
-    desc: 'Check drug-drug interactions via RxNorm',
-    href: '/dashboard/interactions',
-    color: 'bg-white/10',
-  },
-  {
-    icon: Search,
-    title: 'Clinical Trials',
-    desc: 'Search 400K+ trials on ClinicalTrials.gov',
-    href: '/dashboard/trials',
-    color: 'bg-white/10',
-  },
-  {
-    icon: Dna,
-    title: 'Protein Analysis',
-    desc: 'Search UniProt for targets and sequences',
-    href: '/dashboard/proteins',
-    color: 'bg-white/10',
-  },
+const TILES = [
+  { icon: MessageSquare, label: 'Research Chat',   sub: 'Ask anything',             href: '/dashboard/chat' },
+  { icon: FlaskConical,  label: 'Molecules',        sub: 'PubChem search',           href: '/dashboard/molecules' },
+  { icon: Activity,      label: 'Interactions',     sub: 'Drug interaction check',   href: '/dashboard/interactions' },
+  { icon: Search,        label: 'Clinical Trials',  sub: 'ClinicalTrials.gov',       href: '/dashboard/trials' },
+  { icon: Dna,           label: 'Proteins',         sub: 'UniProt + AlphaFold',      href: '/dashboard/proteins' },
 ]
 
-const MODE_PROMPTS = [
+const PROMPTS = [
   'Analyze the mechanism of action of ibuprofen',
-  'Find clinical trials for lung cancer treatment recruiting now',
-  'Check interactions between metformin, lisinopril, and aspirin',
+  'Find recruiting Phase 3 trials for lung cancer',
+  'Check interactions between metformin, lisinopril, aspirin',
   'What are the Lipinski properties of paclitaxel?',
   'Find proteins associated with Alzheimer\'s disease',
-  'Suggest analogs of sildenafil with fewer side effects',
+  'Suggest ibuprofen analogs with better GI safety',
 ]
 
 interface Props {
@@ -57,46 +27,51 @@ interface Props {
 }
 
 export default function DashboardHome({ user, recentSessions }: Props) {
-  const name = user.user_metadata?.full_name?.split(' ')[0] ?? 'Researcher'
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const first = user.user_metadata?.full_name?.split(' ')[0] ?? 'Researcher'
+  const h = new Date().getHours()
+  const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
 
   return (
-    <div className="h-full overflow-y-auto bg-black p-6 md:p-8">
-      <div className="max-w-5xl mx-auto">
+    <div className="h-full overflow-y-auto px-6 py-8" style={{ background: '#0d0d0d' }}>
+      <div className="max-w-4xl mx-auto">
+
         {/* Greeting */}
-        <div className="mb-10">
-          <h1 className="text-white text-3xl font-light mb-1" style={{ letterSpacing: '-0.02em' }}>
-            {greeting}, <span style={{ fontStyle: 'italic' }}>{name}</span>
-          </h1>
-          <p className="text-white/40 text-sm">What are you researching today?</p>
+        <div className="mb-8">
+          <h1 className="text-white text-2xl font-semibold mb-1">{greet}, {first}</h1>
+          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>What would you like to research today?</p>
         </div>
 
-        {/* Quick actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-10">
-          {QUICK_ACTIONS.map(({ icon: Icon, title, desc, href }) => (
-            <Link key={href} href={href} className="group border border-white/10 rounded-xl p-4 hover:border-white/25 hover:bg-white/5 transition-all">
-              <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-white/20 transition-colors">
-                <Icon className="w-4 h-4 text-white" />
+        {/* Quick access tiles */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-8">
+          {TILES.map(({ icon: Icon, label, sub, href }) => (
+            <Link key={href} href={href}
+              className="flex flex-col gap-2 p-4 rounded-xl group transition-all"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.09)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)' }}
+            >
+              <Icon size={16} style={{ color: 'rgba(255,255,255,0.5)' }} />
+              <div>
+                <p className="text-white text-xs font-medium">{label}</p>
+                <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{sub}</p>
               </div>
-              <p className="text-white text-sm font-medium mb-1">{title}</p>
-              <p className="text-white/40 text-xs leading-relaxed">{desc}</p>
             </Link>
           ))}
         </div>
 
         {/* Suggested prompts */}
-        <div className="mb-10">
-          <h2 className="text-white/40 text-xs font-medium uppercase tracking-widest mb-4">Try asking</h2>
+        <div className="mb-8">
+          <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.25)' }}>Try asking MAID</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {MODE_PROMPTS.map(prompt => (
-              <Link
-                key={prompt}
-                href={`/dashboard/chat?q=${encodeURIComponent(prompt)}`}
-                className="flex items-center justify-between gap-3 border border-white/10 rounded-xl px-4 py-3 hover:border-white/25 hover:bg-white/5 transition-all group"
+            {PROMPTS.map(p => (
+              <Link key={p} href={`/dashboard/chat?q=${encodeURIComponent(p)}`}
+                className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm transition-all group"
+                style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.5)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)' }}
               >
-                <span className="text-white/60 text-sm group-hover:text-white transition-colors">{prompt}</span>
-                <ArrowRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white/60 shrink-0 transition-colors" />
+                <span>{p}</span>
+                <ArrowRight size={13} className="shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" />
               </Link>
             ))}
           </div>
@@ -105,20 +80,19 @@ export default function DashboardHome({ user, recentSessions }: Props) {
         {/* Recent sessions */}
         {recentSessions.length > 0 && (
           <div>
-            <h2 className="text-white/40 text-xs font-medium uppercase tracking-widest mb-4">Recent research</h2>
-            <div className="space-y-2">
-              {recentSessions.map(session => (
-                <Link
-                  key={session.id}
-                  href={`/dashboard/chat?session=${session.id}`}
-                  className="flex items-center gap-3 border border-white/10 rounded-xl px-4 py-3 hover:border-white/25 hover:bg-white/5 transition-all group"
+            <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.25)' }}>Recent</p>
+            <div className="space-y-1.5">
+              {recentSessions.map(s => (
+                <Link key={s.id} href={`/dashboard/chat?session=${s.id}`}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all"
+                  style={{ border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.55)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)' }}
                 >
-                  <Clock className="w-4 h-4 text-white/20 shrink-0" />
-                  <span className="text-white/70 text-sm flex-1 truncate group-hover:text-white transition-colors">
-                    {session.title}
-                  </span>
-                  <span className="text-white/20 text-xs shrink-0">
-                    {new Date(session.updated_at).toLocaleDateString()}
+                  <Clock size={13} className="shrink-0 opacity-40" />
+                  <span className="flex-1 truncate">{s.title}</span>
+                  <span className="text-xs shrink-0" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                    {new Date(s.updated_at).toLocaleDateString()}
                   </span>
                 </Link>
               ))}

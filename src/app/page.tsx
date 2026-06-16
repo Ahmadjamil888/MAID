@@ -1,25 +1,16 @@
+import SpotlightHero from '@/components/landing/SpotlightHero'
 import LandingNav from '@/components/landing/LandingNav'
-import HeroSection from '@/components/landing/HeroSection'
-import LogoStrip from '@/components/landing/LogoStrip'
-import FeatureAgent from '@/components/landing/FeatureAgent'
-import FeatureAutonomous from '@/components/landing/FeatureAutonomous'
-import FeatureCollaboration from '@/components/landing/FeatureCollaboration'
-import DatabaseSection from '@/components/landing/DatabaseSection'
-import CTASection from '@/components/landing/CTASection'
-import LandingFooter from '@/components/landing/LandingFooter'
+import LandingSections from '@/components/landing/LandingSections'
 
 export default function Home() {
   return (
-    <main className="bg-black min-h-screen overflow-x-hidden">
+    <div
+      className="min-h-screen"
+      style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em', background: '#111110' }}
+    >
       <LandingNav />
-      <HeroSection />
-      <LogoStrip />
-      <FeatureAgent />
-      <FeatureAutonomous />
-      <FeatureCollaboration />
-      <DatabaseSection />
-      <CTASection />
-      <LandingFooter />
-    </main>
+      <SpotlightHero />
+      <LandingSections />
+    </div>
   )
 }
