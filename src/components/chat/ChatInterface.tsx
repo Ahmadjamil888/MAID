@@ -174,7 +174,11 @@ function SourcesBadge({ sources }: { sources: DataSource[] }) {
 }
 
 // ── Main component (inner, uses useSearchParams) ──────────────────────────────
-function ChatInterfaceInner() {
+interface ChatInterfaceProps {
+  user?: { id: string; email?: string; user_metadata?: Record<string, string> } | null
+}
+
+function ChatInterfaceInner({ user }: ChatInterfaceProps) {
   const router       = useRouter()
   const searchParams = useSearchParams()
 
@@ -253,6 +257,12 @@ function ChatInterfaceInner() {
       } catch {}
     }
     router.push(`/dashboard/chat?session=${id}`, { scroll: false })
+  }
+
+  async function signOut() {
+    const { createClient } = await import('@/lib/supabase/client')
+    await createClient().auth.signOut()
+    router.push('/')
   }
 
   async function newSession() {
@@ -484,29 +494,13 @@ function ChatInterfaceInner() {
   return (
     <div style={{ display: 'flex', height: '100%', background: '#0d0d0d', position: 'relative' }}>
 
-      {/* ── Left sidebar (chat history) ── */}
-      {/* Mobile overlay */}
-      {mobileSidebarOpen && (
-        <div
-          onClick={() => setMobileSidebarOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 40 }}
-        />
-      )}
-
-      <aside style={{
-        width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column',
-        background: '#111', borderRight: '1px solid rgba(255,255,255,0.06)',
-        // Desktop: respect sidebarOpen
-        ...(typeof window !== 'undefined' && window.innerWidth >= 768
-          ? (sidebarOpen ? {} : { width: 0, overflow: 'hidden', borderRight: 'none' })
-          : {}),
-        // Mobile: absolute overlay
-        position: (typeof window !== 'undefined' && window.innerWidth < 768) ? 'fixed' : 'relative',
-        top: 0, left: 0, bottom: 0, zIndex: 50,
-        transform: (typeof window !== 'undefined' && window.innerWidth < 768)
-          ? (mobileSidebarOpen ? 'translateX(0)' : 'translateX(-100%)')
-          : undefined,
-        transition: 'width 0.25s ease, transform 0.28s cubic-bezier(0.32,0.72,0,1)',
+      {/* Desktop sidebar — hidden via width collapse */}
+      <aside className="hidden md:flex" style={{
+        width: sidebarOpen ? 220 : 0,
+        flexShrink: 0, flexDirection: 'column',
+        background: '#111', borderRight: sidebarOpen ? '1px solid rgba(255,255,255,0.06)' : 'none',
+        overflow: 'hidden',
+        transition: 'width 0.25s ease',
       }}>
         {/* Header */}
         <div style={{
@@ -534,38 +528,44 @@ function ChatInterfaceInner() {
             </p>
           )}
           {sessions.map(s => (
-            <button
-              key={s.id}
-              onClick={() => { loadSession(s.id); setMobileSidebarOpen(false) }}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 6,
-                background: sessionId === s.id ? 'rgba(255,255,255,0.1)' : 'transparent',
-                border: 'none', borderRadius: 7, padding: '7px 8px',
-                color: sessionId === s.id ? '#fff' : 'rgba(255,255,255,0.45)',
-                cursor: 'pointer', fontSize: 12, textAlign: 'left',
-                transition: 'background 0.15s', marginBottom: 1,
-              }}
-              onMouseEnter={e => { if (sessionId !== s.id) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
-              onMouseLeave={e => { if (sessionId !== s.id) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-            >
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {sessionTitle(s.messages)}
-              </span>
-              <span
-                onClick={e => deleteSession(s.id, e)}
+            <div key={s.id} className="sess-row" style={{ position: 'relative', marginBottom: 1 }}>
+              <button
+                onClick={() => loadSession(s.id)}
                 style={{
-                  flexShrink: 0, opacity: 0, color: 'rgba(255,100,100,0.6)',
-                  display: 'flex', alignItems: 'center',
+                  width: '100%', display: 'flex', alignItems: 'center',
+                  background: sessionId === s.id ? 'rgba(255,255,255,0.1)' : 'transparent',
+                  border: 'none', borderRadius: 7, padding: '7px 28px 7px 8px',
+                  color: sessionId === s.id ? '#fff' : 'rgba(255,255,255,0.55)',
+                  cursor: 'pointer', fontSize: 12, textAlign: 'left',
+                  transition: 'background 0.15s',
                 }}
-                className="session-delete"
-              ><Ic.Trash /></span>
-            </button>
+                onMouseEnter={e => { if (sessionId !== s.id) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseLeave={e => { if (sessionId !== s.id) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.title || sessionTitle(s.messages)}
+                </span>
+              </button>
+              <button
+                onClick={e => deleteSession(s.id, e)}
+                className="sess-del"
+                title="Delete"
+                style={{
+                  position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'rgba(255,100,100,0.6)', padding: '3px', borderRadius: 4,
+                  display: 'flex', alignItems: 'center', opacity: 0, transition: 'opacity 0.15s',
+                }}
+              >
+                <Ic.Trash />
+              </button>
+            </div>
           ))}
-          <style>{`.session-delete{opacity:0!important}.session-delete:hover~.session-delete,.session-delete:hover{opacity:1!important} button:hover .session-delete{opacity:1!important}`}</style>
+          <style>{`.sess-row:hover .sess-del { opacity: 1 !important; }`}</style>
         </div>
 
-        {/* Nav links */}
-        <div style={{ padding: '6px 6px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+        {/* Nav links + user profile */}
+        <div style={{ padding: '6px 6px 0', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
           {SIDEBAR_NAV.map(({ label, href, Icon }) => (
             <button
               key={href}
@@ -589,7 +589,137 @@ function ChatInterfaceInner() {
               <Icon /> {label}
             </button>
           ))}
+
+          {/* User profile chip */}
+          {user && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '6px 0 0', padding: '10px 8px 12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                  background: 'rgba(255,255,255,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 700, color: '#fff',
+                }}>
+                  {(user.user_metadata?.full_name ?? user.email ?? 'U')[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ color: '#fff', fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                    {user.user_metadata?.full_name ?? user.email?.split('@')[0]}
+                  </p>
+                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                    {user.email}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={signOut}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 7,
+                  background: 'transparent', border: 'none', borderRadius: 7,
+                  padding: '6px 8px', color: 'rgba(255,255,255,0.3)',
+                  cursor: 'pointer', fontSize: 12, textAlign: 'left',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'
+                  ;(e.currentTarget as HTMLElement).style.color = '#f87171'
+                }}
+                onMouseLeave={e => {
+                  ;(e.currentTarget as HTMLElement).style.background = 'transparent'
+                  ;(e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.3)'
+                }}
+              >
+                <Ic.Logout /> Sign out
+              </button>
+            </div>
+          )}
         </div>
+      </aside>
+
+      {/* Mobile sidebar overlay */}
+      {mobileSidebarOpen && (
+        <div
+          onClick={() => setMobileSidebarOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 40 }}
+        />
+      )}
+      <aside className="flex md:hidden" style={{
+        position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50,
+        width: 220, flexDirection: 'column',
+        background: '#111', borderRight: '1px solid rgba(255,255,255,0.06)',
+        transform: mobileSidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 0.28s cubic-bezier(0.32,0.72,0,1)',
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '12px 12px 10px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+        }}>
+          <button
+            onClick={() => { newSession(); setMobileSidebarOpen(false) }}
+            style={{
+              flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8, padding: '7px 10px', color: 'rgba(255,255,255,0.8)',
+              cursor: 'pointer', fontSize: 12, fontWeight: 500,
+            }}
+          >
+            <Ic.Plus /> New chat
+          </button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 6px' }}>
+          {sessions.length === 0 && (
+            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12, textAlign: 'center', padding: '24px 8px' }}>No sessions yet</p>
+          )}
+          {sessions.map(s => (
+            <button key={s.id} onClick={() => { loadSession(s.id); setMobileSidebarOpen(false) }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 6,
+                background: sessionId === s.id ? 'rgba(255,255,255,0.1)' : 'transparent',
+                border: 'none', borderRadius: 7, padding: '7px 8px',
+                color: sessionId === s.id ? '#fff' : 'rgba(255,255,255,0.45)',
+                cursor: 'pointer', fontSize: 12, textAlign: 'left', marginBottom: 1,
+              }}
+            >
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {s.title || sessionTitle(s.messages)}
+              </span>
+            </button>
+          ))}
+        </div>
+        {/* Mobile user chip */}
+        {user && (
+          <div style={{ padding: '10px 8px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(255,255,255,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 700, color: '#fff',
+              }}>
+                {(user.user_metadata?.full_name ?? user.email ?? 'U')[0].toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ color: '#fff', fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                  {user.user_metadata?.full_name ?? user.email?.split('@')[0]}
+                </p>
+                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                  {user.email}
+                </p>
+              </div>
+            </div>
+            <button onClick={() => { signOut(); setMobileSidebarOpen(false) }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 7,
+                background: 'transparent', border: 'none', borderRadius: 7,
+                padding: '6px 8px', color: 'rgba(255,255,255,0.35)',
+                cursor: 'pointer', fontSize: 12, textAlign: 'left',
+              }}
+            >
+              <Ic.Logout /> Sign out
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* ── Main chat area ── */}
@@ -991,14 +1121,14 @@ function ChatInterfaceInner() {
 }
 
 // ── Export (wrapped in Suspense for useSearchParams) ──────────────────────────
-export default function ChatInterface() {
+export default function ChatInterface({ user }: ChatInterfaceProps) {
   return (
     <Suspense fallback={
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>
         Loading…
       </div>
     }>
-      <ChatInterfaceInner />
+      <ChatInterfaceInner user={user} />
     </Suspense>
   )
 }

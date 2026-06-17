@@ -232,12 +232,18 @@ async function executeTool(
 }
 
 // ─── Build conversation history for the synthesis phase ──────────────────────
-// Keep up to 20 messages for strong context memory, summarising nothing.
+// Keep last 8 messages, truncate each to 800 chars to prevent token overflow.
+// Models like llama-3.1-8b have ~8K context — long histories blow it up fast.
+
+function truncateContent(content: string, max = 800): string {
+  if (content.length <= max) return content
+  return content.slice(0, max) + '… [truncated]'
+}
 
 function buildHistory(history: ChatMessage[]): ChatCompletionMessageParam[] {
-  return history.slice(-20).map(m => ({
+  return history.slice(-8).map(m => ({
     role: m.role as 'user' | 'assistant',
-    content: m.content,
+    content: truncateContent(m.content),
   }))
 }
 
@@ -340,7 +346,7 @@ export async function* runAgentStream(
           content: `Here is fresh data retrieved from scientific databases for this query:\n\n${
             toolContext
               .filter(m => m.role === 'tool')
-              .map(m => m.content)
+              .map(m => typeof m.content === 'string' ? m.content.slice(0, 2000) : '')
               .join('\n\n---\n\n')
           }\n\nSynthesize this data into a comprehensive response. Do not call any tools.`,
         }]

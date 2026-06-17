@@ -3,8 +3,18 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Mail, Lock, Eye, EyeOff, User, Loader2, CheckCircle } from 'lucide-react'
+
+function PillIcon() {
+  return (
+    <div style={{ width: 52, height: 52, borderRadius: 14, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
+        <path d="M10.5 21.5L21.5 10.5" stroke="#111" strokeWidth="2.4" strokeLinecap="round"/>
+        <path d="M8 17.5a5.5 5.5 0 0 0 7.778 7.778L22.5 18.5A5.5 5.5 0 1 0 14.5 10.5L8 17.5z" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </div>
+  )
+}
 
 export default function SignupPage() {
   const supabase = createClient()
@@ -58,7 +68,7 @@ export default function SignupPage() {
       }} />
       <div className="relative w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <Image src="/logo.png" alt="MAID" width={52} height={52} className="rounded-xl mb-3" style={{ objectFit: 'contain' }} />
+          <PillIcon />
           <h1 className="text-white text-2xl font-semibold tracking-tight">Create account</h1>
           <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>Join the MAID research platform</p>
         </div>
