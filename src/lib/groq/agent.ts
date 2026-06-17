@@ -5,7 +5,7 @@ import type { GroqModelId } from '@/types'
 import { searchCompoundByName, getCompoundByCID, getSimilarCompounds } from '@/lib/api/pubchem'
 import { searchMoleculeByName, getMoleculeActivities, getDrugMechanism } from '@/lib/api/chembl'
 import { searchDrugLabel, getAdverseEventCounts } from '@/lib/api/openfda'
-import { searchClinicalTrials, searchByIntervention } from '@/lib/api/clinicaltrials'
+import { searchClinicalTrials } from '@/lib/api/clinicaltrials'
 import { getDrugInteractions } from '@/lib/api/rxnorm'
 import { searchProtein } from '@/lib/api/uniprot'
 import type { DataSource, ToolMode, AgentResponse, ChatMessage } from '@/types'
@@ -143,6 +143,18 @@ const tools: ChatCompletionTool[] = [
 
 // ─── Tool executor ───────────────────────────────────────────────────────────
 
+/** Wrap any promise with a per-tool timeout so a slow upstream never hangs everything. */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    ),
+  ])
+}
+
+const TOOL_TIMEOUT_MS = 8000 // 8 s per external API call
+
 async function executeTool(
   name: string,
   args: Record<string, unknown>,
@@ -151,19 +163,21 @@ async function executeTool(
   try {
     switch (name) {
       case 'search_pubchem': {
-        const cids = await searchCompoundByName(args.compound_name as string)
+        const cids = await withTimeout(searchCompoundByName(args.compound_name as string), TOOL_TIMEOUT_MS, 'PubChem search')
         if (!cids.data || cids.data.length === 0) return 'No compound found in PubChem.'
-        const compound = await getCompoundByCID(cids.data[0])
+        const compound = await withTimeout(getCompoundByCID(cids.data[0]), TOOL_TIMEOUT_MS, 'PubChem CID fetch')
         sources.push({ type: 'pubchem', name: 'PubChem', url: `https://pubchem.ncbi.nlm.nih.gov/compound/${cids.data[0]}` })
         return JSON.stringify(compound.data ?? { error: 'Not found' }, null, 2)
       }
 
       case 'search_chembl': {
-        const mols = await searchMoleculeByName(args.drug_name as string)
+        const mols = await withTimeout(searchMoleculeByName(args.drug_name as string), TOOL_TIMEOUT_MS, 'ChEMBL search')
         if (!mols.data || mols.data.length === 0) return 'No molecule found in ChEMBL.'
         const mol = mols.data[0]
-        const activities = await getMoleculeActivities(mol.molecule_chembl_id)
-        const mechanisms = await getDrugMechanism(mol.molecule_chembl_id)
+        const [activities, mechanisms] = await Promise.all([
+          withTimeout(getMoleculeActivities(mol.molecule_chembl_id), TOOL_TIMEOUT_MS, 'ChEMBL activities'),
+          withTimeout(getDrugMechanism(mol.molecule_chembl_id), TOOL_TIMEOUT_MS, 'ChEMBL mechanism'),
+        ])
         sources.push({ type: 'chembl', name: 'ChEMBL', url: `https://www.ebi.ac.uk/chembl/compound_report_card/${mol.molecule_chembl_id}` })
         return JSON.stringify({
           molecule: mol,
@@ -174,8 +188,8 @@ async function executeTool(
 
       case 'search_fda': {
         const [labels, adverseEvents] = await Promise.all([
-          searchDrugLabel(args.drug_name as string),
-          getAdverseEventCounts(args.drug_name as string),
+          withTimeout(searchDrugLabel(args.drug_name as string), TOOL_TIMEOUT_MS, 'FDA labels'),
+          withTimeout(getAdverseEventCounts(args.drug_name as string), TOOL_TIMEOUT_MS, 'FDA adverse events'),
         ])
         sources.push({ type: 'openfda', name: 'OpenFDA', url: `https://open.fda.gov/` })
         return JSON.stringify({
@@ -185,18 +199,22 @@ async function executeTool(
       }
 
       case 'search_clinical_trials': {
-        const trials = await searchClinicalTrials(
-          args.query as string,
-          args.status as string | undefined,
-          args.phase as string | undefined,
-          8
+        const trials = await withTimeout(
+          searchClinicalTrials(
+            args.query as string,
+            args.status as string | undefined,
+            args.phase as string | undefined,
+            8
+          ),
+          TOOL_TIMEOUT_MS,
+          'ClinicalTrials search'
         )
         sources.push({ type: 'clinicaltrials', name: 'ClinicalTrials.gov', url: `https://clinicaltrials.gov/search?query=${encodeURIComponent(args.query as string)}` })
         return JSON.stringify(trials.data ?? [], null, 2)
       }
 
       case 'check_drug_interactions': {
-        const interactions = await getDrugInteractions(args.drug_names as string[])
+        const interactions = await withTimeout(getDrugInteractions(args.drug_names as string[]), TOOL_TIMEOUT_MS, 'RxNorm')
         sources.push({ type: 'rxnorm', name: 'RxNorm / NLM', url: 'https://rxnav.nlm.nih.gov/' })
         if (!interactions.data || interactions.data.length === 0) {
           return 'No significant interactions found between these drugs in the RxNorm database.'
@@ -205,15 +223,15 @@ async function executeTool(
       }
 
       case 'search_protein': {
-        const proteins = await searchProtein(args.protein_name as string, 5)
+        const proteins = await withTimeout(searchProtein(args.protein_name as string, 5), TOOL_TIMEOUT_MS, 'UniProt search')
         sources.push({ type: 'uniprot', name: 'UniProt', url: `https://www.uniprot.org/uniprotkb?query=${encodeURIComponent(args.protein_name as string)}` })
         return JSON.stringify(proteins.data?.slice(0, 3) ?? [], null, 2)
       }
 
       case 'find_similar_molecules': {
-        const cids = await searchCompoundByName(args.compound_name as string)
+        const cids = await withTimeout(searchCompoundByName(args.compound_name as string), TOOL_TIMEOUT_MS, 'PubChem similar search')
         if (!cids.data || cids.data.length === 0) return 'Compound not found.'
-        const similar = await getSimilarCompounds(cids.data[0], (args.threshold as number) ?? 90)
+        const similar = await withTimeout(getSimilarCompounds(cids.data[0], (args.threshold as number) ?? 90), TOOL_TIMEOUT_MS, 'PubChem similarity')
         sources.push({ type: 'pubchem', name: 'PubChem Similarity', url: `https://pubchem.ncbi.nlm.nih.gov/` })
         return JSON.stringify(similar.data ?? [], null, 2)
       }
@@ -222,7 +240,7 @@ async function executeTool(
         return `Unknown tool: ${name}`
     }
   } catch (e) {
-    return `Tool error: ${String(e)}`
+    return `Tool error (continuing without this data): ${String(e)}`
   }
 }
 
@@ -338,24 +356,31 @@ export async function* runAgentStream(
     { role: 'user', content: userMessage },
   ]
 
-  // Tool collection phase
+  // Tool collection phase — max 3 rounds to stay well within the 60s route timeout
   let iterations = 0
-  let needsTools = true
 
-  while (needsTools && iterations < 5) {
+  while (iterations < 3) {
     iterations++
-    const check = await groq.chat.completions.create({
-      model: modelId,
-      messages,
-      tools,
-      tool_choice: 'auto',
-      temperature: 0.3,
-      max_tokens: 1024,
-    })
+
+    let check
+    try {
+      check = await groq.chat.completions.create({
+        model: modelId,
+        messages,
+        tools,
+        tool_choice: 'auto',
+        temperature: 0.3,
+        max_tokens: 1024,
+      })
+    } catch (e) {
+      // If the model itself errors (e.g. bad API key, unsupported params), bail out early
+      yield `__SOURCES__${JSON.stringify({ sources, toolsUsed })}__SOURCES__`
+      yield `Error calling AI model: ${String(e)}`
+      return
+    }
 
     const msg = check.choices[0].message
     if (!msg.tool_calls || msg.tool_calls.length === 0) {
-      needsTools = false
       break
     }
 
@@ -374,16 +399,20 @@ export async function* runAgentStream(
   yield `__SOURCES__${JSON.stringify({ sources, toolsUsed })}__SOURCES__`
 
   // Stream final answer
-  const stream = await groq.chat.completions.create({
-    model: modelId,
-    messages,
-    stream: true,
-    temperature: 0.3,
-    max_tokens: 4096,
-  })
+  try {
+    const stream = await groq.chat.completions.create({
+      model: modelId,
+      messages,
+      stream: true,
+      temperature: 0.3,
+      max_tokens: 4096,
+    })
 
-  for await (const chunk of stream) {
-    const delta = chunk.choices[0]?.delta?.content
-    if (delta) yield delta
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content
+      if (delta) yield delta
+    }
+  } catch (e) {
+    yield `\n\nError generating response: ${String(e)}`
   }
 }

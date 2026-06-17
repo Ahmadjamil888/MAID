@@ -73,3 +73,21 @@ body {
 .prose-maid td { color:#bbb; padding:0.45em 0.9em; border:1px solid #1a1a1a; }
 .prose-maid tr:nth-child(even) td { background:#080808; }
 .prose-maid hr { border:none; border-top:1px solid #1a1a1a; margin:1.2em 0; }
+
+/* ── MAID chat app scrollbar (light/dark via css vars) ── */
+.maid-app ::-webkit-scrollbar { width:8px; height:8px; }
+.maid-app ::-webkit-scrollbar-thumb { background:var(--border); border-radius:8px; }
+.maid-app ::-webkit-scrollbar-track { background:transparent; }
+
+/* ── Prose styles that adapt to theme ── */
+.maid-prose h1,.maid-prose h2,.maid-prose h3 { color:var(--text-primary); font-weight:600; margin:1em 0 0.4em; line-height:1.3; }
+.maid-prose p  { color:var(--text-primary); line-height:1.75; margin:0.5em 0; }
+.maid-prose ul,.maid-prose ol { color:var(--text-primary); padding-left:1.4em; }
+.maid-prose li { margin:0.25em 0; }
+.maid-prose code { background:var(--hover); color:var(--text-primary); padding:2px 5px; border-radius:4px; font-size:0.82em; }
+.maid-prose pre { background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:1em; overflow-x:auto; margin:0.8em 0; }
+.maid-prose pre code { background:none; padding:0; }
+.maid-prose strong { color:var(--text-primary); }
+.maid-prose table { width:100%; border-collapse:collapse; font-size:0.88em; }
+.maid-prose th { background:var(--input-bg); color:var(--text-primary); padding:0.45em 0.9em; text-align:left; border:1px solid var(--border); }
+.maid-prose td { color:var(--text-secondary); padding:0.45em 0.9em; border:1px solid var(--border); }
