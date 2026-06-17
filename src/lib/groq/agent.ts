@@ -38,8 +38,27 @@ RESPONSE FORMAT:
 You are assisting with: pharmaceutical research, drug discovery, mechanism of action analysis, drug interaction checking, clinical trial search, molecule analysis, and protein structure analysis.`
 
 // ─── Tool-planning system prompt (phase 1 only) ───────────────────────────────
-// Deliberately minimal — just decides which tools to call, nothing else.
-const PLANNER_PROMPT = `You are a tool-selection assistant. Your ONLY job is to decide which database tools to call for the user's request. Do NOT write any text response. Only call tools. If no database lookup is needed, call no tools.`
+const PLANNER_PROMPT = `You are a tool-selection assistant for a pharmaceutical research AI.
+
+Your ONLY job is to decide which database tools to call based on the user's message.
+
+RULES:
+- Only call tools when the user is EXPLICITLY asking about a specific drug, molecule, compound, protein, clinical trial, or drug interaction.
+- Do NOT call any tools for: greetings, general questions, follow-up clarifications, thank-yous, small talk, or vague messages.
+- Do NOT call tools if the question can be answered from general knowledge without a database lookup.
+- If in doubt, call NO tools.
+
+Examples of messages that need NO tools:
+- "hello", "hi", "thanks", "what can you do?", "tell me about yourself"
+- "what is pharmacology?", "explain ADMET"
+- "what did you mean by that?"
+
+Examples of messages that need tools:
+- "analyze ibuprofen", "what are the interactions between warfarin and aspirin?"
+- "find clinical trials for lung cancer", "search for EGFR inhibitors"
+- "what is the molecular weight of metformin?"
+
+Do NOT write any text response. Only call tools when clearly needed.`
 
 // ─── Tool definitions ────────────────────────────────────────────────────────
 
@@ -247,6 +266,17 @@ function buildHistory(history: ChatMessage[]): ChatCompletionMessageParam[] {
   }))
 }
 
+// ─── Quick heuristic: skip tool phase for clearly conversational messages ─────
+const CONVERSATIONAL_PATTERN = /^(hi|hello|hey|thanks|thank you|ok|okay|sure|yes|no|bye|good|great|what can you do|who are you|help me|what is pharmacology|explain|tell me about yourself)\b/i
+
+function isConversational(msg: string): boolean {
+  const trimmed = msg.trim()
+  // Short messages under 20 chars with no drug-like terms → skip tools
+  if (trimmed.length < 20 && !/ (mg|drug|molecule|compound|protein|trial|dose|inhibitor|receptor)/i.test(trimmed)) return true
+  if (CONVERSATIONAL_PATTERN.test(trimmed)) return true
+  return false
+}
+
 // ─── Phase 1: Tool planning ───────────────────────────────────────────────────
 // Uses a minimal planner system prompt + tool_choice:'auto' with very low
 // max_tokens so the model ONLY outputs tool calls — no prose.
@@ -259,6 +289,9 @@ async function runToolPhase(
   sources: DataSource[],
   toolsUsed: string[]
 ): Promise<ChatCompletionMessageParam[]> {
+  // Fast-path: skip tool lookup for conversational messages
+  if (isConversational(userMessage)) return []
+
   // Messages for the planner — just the last few turns for context + new message
   const plannerMessages: ChatCompletionMessageParam[] = [
     { role: 'system', content: PLANNER_PROMPT },
@@ -354,13 +387,17 @@ export async function* runAgentStream(
     ),
   ]
 
+  // Shorter token budget for conversational replies, full budget for research queries
+  const isResearch = toolContext.length > 0 || userMessage.length > 60
+  const maxTokens  = isResearch ? 4096 : 512
+
   try {
     const stream = await groq.chat.completions.create({
       model: modelId,
       messages: synthesisMessages,
       stream: true,
       temperature: 0.35,
-      max_tokens: 4096,
+      max_tokens: maxTokens,
       // No tools passed → model cannot accidentally try to call one
     })
 
