@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { FileText, Plus, Clock, Trash2, ArrowRight } from 'lucide-react'
 
@@ -14,7 +13,6 @@ interface Session {
 }
 
 export default function ReportsPage() {
-  const supabase = createClient()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -24,23 +22,26 @@ export default function ReportsPage() {
   }, []) // eslint-disable-line
 
   async function loadSessions() {
-    const { data } = await supabase
-      .from('chat_sessions')
-      .select('id, title, tool_mode, updated_at, messages')
-      .order('updated_at', { ascending: false })
-      .limit(50)
-    setSessions(data ?? [])
+    setLoading(true)
+    try {
+      const res = await fetch('/api/sessions')
+      if (!res.ok) { setLoading(false); return }
+      const json = await res.json()
+      setSessions(json.sessions ?? [])
+    } catch { /* ignore */ }
     setLoading(false)
   }
 
   async function deleteSession(id: string) {
     setDeleting(id)
-    await fetch('/api/sessions', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    })
-    setSessions(prev => prev.filter(s => s.id !== id))
+    try {
+      await fetch('/api/sessions', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      setSessions(prev => prev.filter(s => s.id !== id))
+    } catch { /* ignore */ }
     setDeleting(null)
   }
 

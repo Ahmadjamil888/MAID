@@ -8,7 +8,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('chat_sessions')
-    .select('id, title, tool_mode, created_at, updated_at')
+    .select('id, title, tool_mode, created_at, updated_at, messages')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false })
     .limit(50)
