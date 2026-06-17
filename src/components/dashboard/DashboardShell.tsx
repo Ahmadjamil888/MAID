@@ -2,13 +2,23 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import {
   MessageSquare, Search, Activity, Dna, FileText,
   Settings, LogOut, Menu, X, FlaskConical, Home,
 } from 'lucide-react'
+
+// White pill icon — used everywhere instead of logo.png
+export function PillLogo({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="8" fill="#ffffff"/>
+      <path d="M10.5 21.5L21.5 10.5" stroke="#000" strokeWidth="2.4" strokeLinecap="round"/>
+      <path d="M8 17.5a5.5 5.5 0 0 0 7.778 7.778L22.5 18.5A5.5 5.5 0 1 0 14.5 10.5L8 17.5z" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
 
 const NAV = [
   { href: '/dashboard',              icon: Home,          label: 'Home' },
@@ -42,14 +52,7 @@ function SidebarContent({ pathname, user, onClose, onSignOut }: SidebarProps) {
         className="flex items-center gap-2.5 px-4 py-4 shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
-        <Image
-          src="/logo.png"
-          alt="MAID"
-          width={34}
-          height={34}
-          className="rounded-lg shrink-0"
-          style={{ objectFit: 'contain' }}
-        />
+        <PillLogo size={30} />
         <span className="text-white font-semibold text-sm tracking-tight">MAID</span>
         {onClose && (
           <button
@@ -236,14 +239,7 @@ export default function DashboardShell({ children, user }: Props) {
           >
             <Menu size={18} />
           </button>
-          <Image
-            src="/logo.png"
-            alt="MAID"
-            width={28}
-            height={28}
-            className="rounded-md"
-            style={{ objectFit: 'contain' }}
-          />
+          <PillLogo size={26} />
           <span className="text-white text-sm font-semibold">MAID</span>
         </div>
 

@@ -17,8 +17,8 @@ export default function ModelSelector({ value, onChange }: Props) {
         onChange={e => onChange(e.target.value as GroqModelId)}
         className="bg-transparent text-white/60 text-xs border border-white/10 rounded-lg px-2 py-1 focus:outline-none focus:border-white/25 hover:border-white/20 transition-colors appearance-none cursor-pointer"
       >
-        {Object.entries(GROQ_MODELS).map(([id, label]) => (
-          <option key={id} value={id} className="bg-black text-white">{label}</option>
+        {Object.entries(GROQ_MODELS).map(([id, { label, description }]) => (
+          <option key={id} value={id} className="bg-black text-white">{label} — {description}</option>
         ))}
       </select>
     </div>

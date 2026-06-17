@@ -100,13 +100,13 @@ export default function SettingsPage() {
             </h2>
 
             <div>
-              <label className="block text-white/50 text-xs mb-1.5">Default Groq Model</label>
+              <label className="block text-white/50 text-xs mb-1.5">Default Model</label>
               <select
                 value={defaultModel}
                 onChange={e => setDefaultModel(e.target.value as GroqModelId)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white text-sm focus:outline-none focus:border-white/30 appearance-none"
               >
-                {Object.entries(GROQ_MODELS).map(([id, label]) => (
+                {Object.entries(GROQ_MODELS).map(([id, { label }]) => (
                   <option key={id} value={id} className="bg-black">{label}</option>
                 ))}
               </select>

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Menu, X } from 'lucide-react'
+import { PillLogo } from '@/components/dashboard/DashboardShell'
 
 const NAV_ITEMS = [
   { label: 'Features',      href: 'features' },
@@ -55,14 +55,7 @@ export default function LandingNav() {
       >
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 shrink-0">
-          <Image
-            src="/logo.png"
-            alt="MAID"
-            width={48}
-            height={48}
-            className="rounded-xl"
-            style={{ objectFit: 'contain' }}
-          />
+          <PillLogo size={36} />
           <span
             className="text-white font-semibold text-lg tracking-tight"
             style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
@@ -172,7 +165,7 @@ export default function LandingNav() {
           style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
         >
           <div className="flex items-center gap-2.5">
-            <Image src="/logo.png" alt="MAID" width={34} height={34} className="rounded-lg" style={{ objectFit: 'contain' }} />
+            <PillLogo size={28} />
             <span
               className="text-white font-semibold"
               style={{ fontFamily: "'Playfair Display',serif", fontStyle: 'italic' }}
