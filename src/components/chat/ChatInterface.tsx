@@ -51,6 +51,149 @@ function TypingDots() {
 
 type Session = { id: string; title: string; updated_at: string }
 
+// ── SidebarContent: top-level stable component ───────────────────────────────
+interface SidebarProps {
+  collapsed: boolean
+  sessions: Session[]
+  activeId: string | null
+  onCollapse: () => void
+  onNewChat: () => void
+  onSelectSession: (id: string) => void
+  onDeleteSession: (id: string, e: React.MouseEvent) => void
+  onCloseMobile: () => void
+}
+
+function SidebarContent({
+  collapsed, sessions, activeId,
+  onCollapse, onNewChat, onSelectSession, onDeleteSession, onCloseMobile,
+}: SidebarProps) {
+  const accent = '#10b981'
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%',background:'var(--sb)',borderRight:'1px solid var(--bdr)',overflow:'hidden'}}>
+      {/* Logo row */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:12,flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,overflow:'hidden',minWidth:0}}>
+          <div style={{width:28,height:28,borderRadius:'50%',background:accent,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'#000'}}>
+            <IconPill />
+          </div>
+          {!collapsed && <span style={{fontWeight:600,fontSize:15,whiteSpace:'nowrap',color:'var(--tp)'}}>MAID</span>}
+        </div>
+        <button onClick={onCollapse}
+          style={{display:'flex',alignItems:'center',justifyContent:'center',width:34,height:34,borderRadius:8,background:'transparent',border:'none',cursor:'pointer',color:'var(--ts)',flexShrink:0}}>
+          {collapsed ? <IconPanelO /> : <IconPanelC />}
+        </button>
+      </div>
+
+      {/* New chat */}
+      <div style={{padding:'0 8px',flexShrink:0}}>
+        <button onClick={onNewChat}
+          style={{display:'flex',alignItems:'center',gap:12,width:'100%',padding:'10px 12px',borderRadius:8,background:'transparent',border:'none',cursor:'pointer',color:'var(--tp)',fontSize:14,fontWeight:500}}>
+          <IconPlus />
+          {!collapsed && <span>New chat</span>}
+        </button>
+      </div>
+
+      {/* Nav */}
+      <nav style={{padding:'0 8px',flexShrink:0}}>
+        {([
+          { Icon: IconSearch, label:'Search chats' },
+          { Icon: IconGrid,   label:'Tools' },
+          { Icon: IconFlask,  label:'Literature' },
+          { Icon: IconMore,   label:'More' },
+        ] as const).map(({Icon,label}) => (
+          <button key={label}
+            style={{display:'flex',alignItems:'center',gap:12,width:'100%',padding:'10px 12px',borderRadius:8,background:'transparent',border:'none',cursor:'pointer',color:'var(--ts)',fontSize:14,textAlign:'left'}}>
+            <Icon />
+            {!collapsed && <span>{label}</span>}
+          </button>
+        ))}
+      </nav>
+
+      {/* Recents */}
+      {!collapsed && (
+        <div style={{flex:1,overflowY:'auto',padding:'8px 8px 4px',marginTop:8}}>
+          {sessions.length > 0 && (
+            <div style={{padding:'4px 12px 4px',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--ts)'}}>Recents</div>
+          )}
+          {sessions.map(s => (
+            <div key={s.id}
+              style={{display:'flex',alignItems:'center',borderRadius:8,background:activeId===s.id?'var(--act)':'transparent',overflow:'hidden'}}
+              onMouseEnter={e => { if (activeId!==s.id) (e.currentTarget as HTMLElement).style.background='var(--hov)' }}
+              onMouseLeave={e => { if (activeId!==s.id) (e.currentTarget as HTMLElement).style.background='transparent' }}>
+              <button
+                onClick={() => { onSelectSession(s.id); onCloseMobile() }}
+                style={{flex:1,textAlign:'left',padding:'8px 12px',background:'transparent',border:'none',cursor:'pointer',color:activeId===s.id?'var(--tp)':'var(--ts)',fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>
+                {s.title}
+              </button>
+              <button onClick={e => onDeleteSession(s.id, e)}
+                style={{padding:'8px 8px',background:'transparent',border:'none',cursor:'pointer',color:'var(--ts)',flexShrink:0,opacity:0.5,display:'flex',alignItems:'center'}}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color='#f87171'; (e.currentTarget as HTMLElement).style.opacity='1' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color='var(--ts)'; (e.currentTarget as HTMLElement).style.opacity='0.5' }}>
+                <IconTrash />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {collapsed && <div style={{flex:1}}/>}
+
+      {/* Bottom */}
+      <div style={{borderTop:'1px solid var(--bdr)',padding:'12px 8px',flexShrink:0}}>
+        {!collapsed && (
+          <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 4px',borderRadius:8}}>
+            <div style={{width:32,height:32,borderRadius:'50%',background:'#059669',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:600,flexShrink:0}}>R</div>
+            <div style={{overflow:'hidden',minWidth:0}}>
+              <div style={{fontSize:14,fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:'var(--tp)'}}>Researcher</div>
+              <div style={{fontSize:11,color:'var(--ts)',whiteSpace:'nowrap'}}>MAID plan</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── InputBox: top-level stable component — never defined inside Inner ─────────
+// Defining it inside Inner causes a new component type every render → unmount/
+// remount on every keystroke → mobile keyboard dismisses on every character.
+interface InputBoxProps {
+  taRef: React.RefObject<HTMLTextAreaElement | null>
+  value: string
+  loading: boolean
+  onChange: (v: string) => void
+  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
+  onSend: () => void
+}
+
+function InputBox({ taRef, value, loading, onChange, onKeyDown, onSend }: InputBoxProps) {
+  return (
+    <div style={{display:'flex',alignItems:'flex-end',gap:6,border:'1px solid var(--bdr)',background:'var(--inp)',borderRadius:26,padding:'8px 10px'}}>
+      <button style={{width:36,height:36,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:'transparent',border:'none',cursor:'pointer',color:'var(--ts)',flexShrink:0}}>
+        <IconPlus />
+      </button>
+      <textarea
+        ref={taRef as React.RefObject<HTMLTextAreaElement>}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder="Ask about a drug, mechanism, or study"
+        rows={1}
+        style={{flex:1,resize:'none',background:'transparent',border:'none',outline:'none',color:'var(--tp)',fontSize:15,fontFamily:'inherit',maxHeight:200,minHeight:24,padding:'8px 6px',lineHeight:1.45}}
+      />
+      {value.trim() ? (
+        <button onClick={onSend} disabled={loading}
+          style={{width:36,height:36,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--btn)',color:'var(--btnT)',border:'none',cursor:'pointer',flexShrink:0,opacity:loading?0.4:1}}>
+          <IconArrowUp />
+        </button>
+      ) : (
+        <button style={{width:36,height:36,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',border:'none',cursor:'pointer',background:'transparent',color:'var(--ts)',flexShrink:0}}>
+          <IconMic />
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── Main inner component (needs Suspense for useSearchParams) ─────────────────
 function Inner() {
   const params   = useSearchParams()
@@ -284,125 +427,8 @@ function Inner() {
     router.replace('/dashboard/chat')
   }
 
-  function onKey(e: React.KeyboardEvent) {
+  function onKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
-  }
-
-  // ── Input box (shared between empty state and conversation) ─────────────────
-  function InputBox({ taRef }: { taRef: React.RefObject<HTMLTextAreaElement | null> }) {
-    return (
-      <div style={{display:'flex',alignItems:'flex-end',gap:6,border:'1px solid var(--bdr)',background:'var(--inp)',borderRadius:26,padding:'8px 10px'}}>
-        <button style={{width:36,height:36,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:'transparent',border:'none',cursor:'pointer',color:'var(--ts)',flexShrink:0}}>
-          <IconPlus />
-        </button>
-        <textarea
-          ref={taRef as React.RefObject<HTMLTextAreaElement>}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={onKey}
-          placeholder="Ask about a drug, mechanism, or study"
-          rows={1}
-          style={{flex:1,resize:'none',background:'transparent',border:'none',outline:'none',color:'var(--tp)',fontSize:15,fontFamily:'inherit',maxHeight:200,minHeight:24,padding:'8px 6px',lineHeight:1.45}}
-        />
-        {input.trim() ? (
-          <button onClick={() => send()} disabled={loading}
-            style={{width:36,height:36,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--btn)',color:'var(--btnT)',border:'none',cursor:'pointer',flexShrink:0,opacity: loading ? 0.4 : 1}}>
-            <IconArrowUp />
-          </button>
-        ) : (
-          <button style={{width:36,height:36,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',border:'none',cursor:'pointer',background:'transparent',color:'var(--ts)',flexShrink:0}}>
-            <IconMic />
-          </button>
-        )}
-      </div>
-    )
-  }
-
-  // ── Sidebar content ──────────────────────────────────────────────────────────
-  function SidebarContent() {
-    return (
-      <div style={{display:'flex',flexDirection:'column',height:'100%',background:'var(--sb)',borderRight:'1px solid var(--bdr)',overflow:'hidden'}}>
-        {/* Logo row */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:12,flexShrink:0}}>
-          <div style={{display:'flex',alignItems:'center',gap:8,overflow:'hidden',minWidth:0}}>
-            <div style={{width:28,height:28,borderRadius:'50%',background:accent,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'#000'}}>
-              <IconPill />
-            </div>
-            {!sidebarCollapsed && <span style={{fontWeight:600,fontSize:15,whiteSpace:'nowrap',color:'var(--tp)'}}>MAID</span>}
-          </div>
-          {/* Desktop collapse btn */}
-          <button onClick={() => setSidebarCollapsed(c => !c)}
-            style={{display:'flex',alignItems:'center',justifyContent:'center',width:34,height:34,borderRadius:8,background:'transparent',border:'none',cursor:'pointer',color:'var(--ts)',flexShrink:0}}>
-            {sidebarCollapsed ? <IconPanelO /> : <IconPanelC />}
-          </button>
-        </div>
-
-        {/* New chat */}
-        <div style={{padding:'0 8px',flexShrink:0}}>
-          <button onClick={startNewChat}
-            style={{display:'flex',alignItems:'center',gap:12,width:'100%',padding:'10px 12px',borderRadius:8,background:'transparent',border:'none',cursor:'pointer',color:'var(--tp)',fontSize:14,fontWeight:500}}>
-            <IconPlus />
-            {!sidebarCollapsed && <span>New chat</span>}
-          </button>
-        </div>
-
-        {/* Nav */}
-        <nav style={{padding:'0 8px',flexShrink:0}}>
-          {([
-            { Icon: IconSearch, label:'Search chats' },
-            { Icon: IconGrid,   label:'Tools' },
-            { Icon: IconFlask,  label:'Literature' },
-            { Icon: IconMore,   label:'More' },
-          ] as const).map(({Icon,label}) => (
-            <button key={label}
-              style={{display:'flex',alignItems:'center',gap:12,width:'100%',padding:'10px 12px',borderRadius:8,background:'transparent',border:'none',cursor:'pointer',color:'var(--ts)',fontSize:14,textAlign:'left'}}>
-              <Icon />
-              {!sidebarCollapsed && <span>{label}</span>}
-            </button>
-          ))}
-        </nav>
-
-        {/* Recents */}
-        {!sidebarCollapsed && (
-          <div style={{flex:1,overflowY:'auto',padding:'8px 8px 4px',marginTop:8}}>
-            {sessions.length > 0 && (
-              <div style={{padding:'4px 12px 4px',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--ts)'}}>Recents</div>
-            )}
-            {sessions.map(s => (
-              <div key={s.id} style={{display:'flex',alignItems:'center',borderRadius:8,background: activeId===s.id ? 'var(--act)' : 'transparent',overflow:'hidden'}}
-                onMouseEnter={e => { if (activeId!==s.id) (e.currentTarget as HTMLElement).style.background='var(--hov)' }}
-                onMouseLeave={e => { if (activeId!==s.id) (e.currentTarget as HTMLElement).style.background='transparent' }}>
-                <button
-                  onClick={() => { setActiveId(s.id); loadSession(s.id); setSidebarOpen(false) }}
-                  style={{flex:1,textAlign:'left',padding:'8px 12px',background:'transparent',border:'none',cursor:'pointer',color: activeId===s.id ? 'var(--tp)' : 'var(--ts)',fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>
-                  {s.title}
-                </button>
-                <button onClick={e => deleteSession(s.id, e)}
-                  style={{padding:'8px 8px',background:'transparent',border:'none',cursor:'pointer',color:'var(--ts)',flexShrink:0,opacity:0.5,display:'flex',alignItems:'center'}}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color='#f87171'; (e.currentTarget as HTMLElement).style.opacity='1' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color='var(--ts)'; (e.currentTarget as HTMLElement).style.opacity='0.5' }}>
-                  <IconTrash />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        {sidebarCollapsed && <div style={{flex:1}}/>}
-
-        {/* Bottom user info */}
-        <div style={{borderTop:'1px solid var(--bdr)',padding:'12px 8px',flexShrink:0}}>
-          {!sidebarCollapsed && (
-            <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 4px',borderRadius:8}}>
-              <div style={{width:32,height:32,borderRadius:'50%',background:'#059669',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:600,flexShrink:0}}>R</div>
-              <div style={{overflow:'hidden',minWidth:0}}>
-                <div style={{fontSize:14,fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:'var(--tp)'}}>Researcher</div>
-                <div style={{fontSize:11,color:'var(--ts)',whiteSpace:'nowrap'}}>MAID plan</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    )
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -441,7 +467,16 @@ function Inner() {
           flexShrink:0, display:'flex', flexDirection:'column',
           transition:'width .18s ease', overflow:'hidden',
         }}>
-          <SidebarContent />
+          <SidebarContent
+            collapsed={sidebarCollapsed}
+            sessions={sessions}
+            activeId={activeId}
+            onCollapse={() => setSidebarCollapsed(c => !c)}
+            onNewChat={startNewChat}
+            onSelectSession={id => { setActiveId(id); loadSession(id) }}
+            onDeleteSession={deleteSession}
+            onCloseMobile={() => {}}
+          />
         </aside>
 
         {/* ── Mobile sidebar overlay ── */}
@@ -449,7 +484,16 @@ function Inner() {
           <div style={{position:'fixed',inset:0,zIndex:50,display:'flex'}}>
             <div onClick={() => setSidebarOpen(false)} style={{position:'absolute',inset:0,background:'rgba(0,0,0,.6)'}}/>
             <aside style={{position:'relative',width:280,flexShrink:0,zIndex:51,height:'100%',overflow:'hidden'}}>
-              <SidebarContent />
+              <SidebarContent
+                collapsed={false}
+                sessions={sessions}
+                activeId={activeId}
+                onCollapse={() => setSidebarCollapsed(c => !c)}
+                onNewChat={startNewChat}
+                onSelectSession={id => { setActiveId(id); loadSession(id) }}
+                onDeleteSession={deleteSession}
+                onCloseMobile={() => setSidebarOpen(false)}
+              />
             </aside>
           </div>
         )}
@@ -510,7 +554,7 @@ function Inner() {
                   What should we research today?
                 </h1>
                 <div style={{width:'100%',maxWidth:680}}>
-                  <InputBox taRef={taHomeRef} />
+                  <InputBox taRef={taHomeRef} value={input} loading={loading} onChange={setInput} onKeyDown={onKey} onSend={() => send()} />
                 </div>
                 <div style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:10,marginTop:22,maxWidth:680}}>
                   {SUGGESTIONS.map(({Icon,label,prompt}) => (
@@ -591,7 +635,7 @@ function Inner() {
           {hasConvo && (
             <div style={{padding:'4px 16px 12px',flexShrink:0}}>
               <div style={{maxWidth:768,margin:'0 auto'}}>
-                <InputBox taRef={taConvRef} />
+                <InputBox taRef={taConvRef} value={input} loading={loading} onChange={setInput} onKeyDown={onKey} onSend={() => send()} />
               </div>
             </div>
           )}
